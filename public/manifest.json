@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Dehix Fraud Detector",
+  "version": "1.0",
+  "description": "Detects and hides fake posts on LinkedIn",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.linkedin.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_popup_container": "panel",
+    "default_icon": {
+      "16": "main-logo.png",
+      "48": "main-logo.png",
+      "128": "main-logo.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "report-icon.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/feed/"
+      ],
+      "js": [
+        "contentScript.js"
+      ]
+    }
+  ]
+}
