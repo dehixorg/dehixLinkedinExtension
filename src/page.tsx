@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import FraudDetection from "./fraud"
 import BlockedPosts from "./block"

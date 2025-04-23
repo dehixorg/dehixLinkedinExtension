@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { ChevronDown, AlertTriangle, Shield, Activity, ExternalLink } from "lucide-react"
 import "./style.css"
@@ -16,10 +14,14 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
 
   useEffect(() => {
-    // Load saved settings from chrome storage
+    // Load saved settings from chrome storage or set default values
     if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
       window.chrome.storage.local.get(["status", "hideFakePosts", "hideSuspiciousPosts"], (data: any) => {
         if (data.status !== undefined) setStatus(data.status)
+        else {
+          setStatus(true)  // Set to true by default on first install
+          window.chrome.storage.local.set({ status: true })  // Save default state to storage
+        }
         if (data.hideFakePosts !== undefined) setHideFakePosts(data.hideFakePosts)
         if (data.hideSuspiciousPosts !== undefined) setHideSuspiciousPosts(data.hideSuspiciousPosts)
       })
@@ -51,7 +53,7 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
 
   return (
     <div className="fraud-detection-container">
-      <div className="logo-section">
+      <div className={`logo-section ${status ? "logo-active" : "logo-inactive"}`}>
         <div className="logo">
           <img src="/main-logo.png" alt="Dehix Logo" className="logo-icon" />
         </div>
@@ -84,6 +86,7 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
                   type="checkbox"
                   checked={hideFakePosts}
                   onChange={(e) => handleToggle("hideFakePosts", e.target.checked)}
+                  disabled={!status}
                 />
                 <span className="slider"></span>
               </label>
@@ -99,6 +102,7 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
                   type="checkbox"
                   checked={hideSuspiciousPosts}
                   onChange={(e) => handleToggle("hideSuspiciousPosts", e.target.checked)}
+                  disabled={!status}
                 />
                 <span className="slider"></span>
               </label>
@@ -108,16 +112,16 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
 
         {/* Action Buttons */}
         <div className="button-group">
-          <button className="action-button">
+          <button className="action-button" disabled={!status}>
             <div className="button-content">
               <Activity size={16} className="button-icon" />
-              <span>View activity</span>
+              <span>activity</span>
             </div>
           </button>
           <button className="action-button">
             <div className="button-content">
               <ExternalLink size={16} className="button-icon" />
-              <span>Visit Dehix</span>
+              <span>Dehix</span>
             </div>
           </button>
         </div>
@@ -133,16 +137,24 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
           {advancedOpen && (
             <div className="accordion-content">
               <div className="advanced-options">
-                <button className="advanced-option-button block-button-red" onClick={onNavigateToBlockedUsers}>
+                <button
+                  className="advanced-option-button block-button-red"
+                  onClick={onNavigateToBlockedUsers}
+                  disabled={!status}
+                >
                   <span>Block Post</span>
                 </button>
-                <button className="advanced-option-button block-button-red" onClick={onNavigateToBlockedProfiles}>
+                <button
+                  className="advanced-option-button block-button-red"
+                  onClick={onNavigateToBlockedProfiles}
+                  disabled={!status}
+                >
                   <span>Block User</span>
                 </button>
-                <button className="advanced-option-button spam-button-gray">
+                <button className="advanced-option-button spam-button-gray" disabled={!status}>
                   <span>Spam Post</span>
                 </button>
-                <button className="advanced-option-button spam-button-gray">
+                <button className="advanced-option-button spam-button-gray" disabled={!status}>
                   <span>Spam User</span>
                 </button>
               </div>

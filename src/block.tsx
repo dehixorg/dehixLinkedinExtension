@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useCallback } from "react"
 import { ArrowLeft, User, X, Loader2 } from "lucide-react"
 import axios from "axios"
