@@ -4,11 +4,12 @@ import BlockedPosts from "./block"
 import BlockedProfiles from "./block-profile"
 import "./style.css"
 import LoginContainer from "./login"
+import ActivityLogs from "./activity"
 
 // Declare chrome if it's not available in the current environment (e.g., testing)
 
 
-type PageType = "fraud-detection" | "blocked-posts" | "blocked-profiles"
+type PageType = "fraud-detection" | "blocked-posts" | "blocked-profiles" | "activity-logs"
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<PageType>("fraud-detection")
@@ -38,13 +39,17 @@ export default function Home() {
           <FraudDetection
             onNavigateToBlockedUsers={() => setCurrentPage("blocked-posts")}
             onNavigateToBlockedProfiles={() => setCurrentPage("blocked-profiles")}
+            onNavigateToActivityLogs={() => setCurrentPage("activity-logs")}
           />
         ) : currentPage === "blocked-posts" ? (
           <BlockedPosts onNavigateBack={() => setCurrentPage("fraud-detection")} uuid={uuid || ""} />
-        ) : (
+        ) : currentPage === "blocked-profiles" ? (
           <BlockedProfiles onNavigateBack={() => setCurrentPage("fraud-detection")} uuid={uuid || ""} />
-        )}
+        ) : currentPage === "activity-logs" ? (
+          <ActivityLogs onNavigateBack={() => setCurrentPage("fraud-detection")} uuid={uuid || ""} />
+        ) : null}
       </div>
+
     </main>
   )
 }

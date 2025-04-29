@@ -874,3 +874,195 @@ input:checked + .toggle-slider:before {
 .action-button:hover {
   background-color: #ec4899;
 }
+/* Base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+    "Helvetica Neue", sans-serif;
+}
+
+html,
+body {
+  background-color: transparent !important;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+:root {
+  --primary-color: #6b21a8;
+  --primary-light: #8b5cf6;
+  --primary-dark: #4c1d95;
+  --accent-color: #ec4899;
+  --text-color: #f8fafc;
+  --background-color: #2e1065;
+  --card-background: #3b0764;
+  --border-color: #4c1d95;
+  --success-color: #10b981;
+  --error-color: #ef4444;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* App container */
+.app-container {
+  display: flex;
+  min-height: 250px;
+  min-width: 320px;
+  max-width: 400px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.app-card {
+  width: 100%;
+  max-width: 450px;
+  background-color: var(--card-background);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ... (keeping all existing styles) ... */
+
+/* Activity Logs Styles */
+.activity-logs-container {
+  background-color: #2e2a4a;
+  color: white;
+  min-height: 300px;
+  width: 100%;
+  max-width: 400px;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.activity-logs-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.activity-logs-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  gap: 16px;
+}
+
+.loading-text {
+  color: var(--text-color);
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+.logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logs-list-container {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.logs-list-container::-webkit-scrollbar {
+  display: none;
+}
+
+.log-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.log-item:last-child {
+  margin-bottom: 0;
+}
+
+.log-item:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.log-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.log-icon {
+  color: var(--accent-color);
+  width: 20px;
+  height: 20px;
+}
+
+.log-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-action {
+  font-weight: 500;
+  font-size: 10px;
+}
+
+.log-timestamp {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  gap: 16px;
+}
+
+.empty-icon {
+  color: rgba(255, 255, 255, 0.3);
+  width: 40px;
+  height: 40px;
+}
+
+.empty-message {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+/* ... (keeping the rest of existing styles) ... */

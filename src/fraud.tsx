@@ -5,9 +5,10 @@ import "./style.css"
 interface FraudDetectionProps {
   onNavigateToBlockedUsers: () => void
   onNavigateToBlockedProfiles: () => void
+  onNavigateToActivityLogs: () => void
 }
 
-export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToBlockedProfiles }: FraudDetectionProps) {
+export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToBlockedProfiles , onNavigateToActivityLogs}: FraudDetectionProps) {
   const [status, setStatus] = useState<boolean>(false)
   const [hideFakePosts, setHideFakePosts] = useState<boolean>(false)
   const [hideSuspiciousPosts, setHideSuspiciousPosts] = useState<boolean>(false)
@@ -113,7 +114,7 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
         {/* Action Buttons */}
         <div className="button-group">
           <button className="action-button" disabled={!status}>
-            <div className="button-content">
+            <div className="button-content" onClick={onNavigateToActivityLogs}>
               <Activity size={16} className="button-icon" />
               <span>activity</span>
             </div>

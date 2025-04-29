@@ -1,4 +1,4 @@
-;(() => {
+(() => {
   const API_BASE_URL = "http://localhost:5000/api/users"
   const ICON_ID = "copy-instructions-icon"
   const MENU_ID = "copy-instructions-menu"
@@ -14,7 +14,7 @@
       chrome.storage.local.get(["reportedPosts", "uuid"], async ({ reportedPosts = [], uuid }) => {
         if (uuid) {
           try {
-            const res = await fetch(`${API_BASE_URL}/blocked-users/${uuid}`)
+            const res = await fetch(`${API_BASE_URL}/block-post/${uuid}/${postId}?reportType=spam`)
             const data = await res.json()
             const apiIds = (data?.blockedUsers || []).map((u) => u.postId)
             resolve(new Set([...reportedPosts, ...apiIds]))
@@ -34,20 +34,26 @@
       chrome.storage.local.get(["blockedProfiles", "uuid"], async ({ blockedProfiles = [], uuid }) => {
         if (uuid) {
           try {
-            const res = await fetch(`${API_BASE_URL}/blocked-profiles/${uuid}`)
-            const data = await res.json()
-            const apiUsernames = (data?.blockedProfiles || []).map((u) => u.profileSlug)
-            resolve(new Set([...blockedProfiles, ...apiUsernames]))
+            const res = await fetch(`${API_BASE_URL}/block-post/${uuid}/${postId}?reportType=spam`)
+            if (!res.ok) {
+              console.error("Failed to fetch blocked profiles. Status:", res.status);
+              resolve(new Set(blockedProfiles)); // Returning the previously stored blocked profiles
+              return;
+            }
+            const data = await res.json();
+            const apiUsernames = (data?.blockedProfiles || []).map((u) => u.profileSlug);
+            resolve(new Set([...blockedProfiles, ...apiUsernames]));
           } catch (e) {
-            console.warn("Could not fetch blocked profiles:", e)
-            resolve(new Set(blockedProfiles))
+            console.warn("Could not fetch blocked profiles:", e);
+            resolve(new Set(blockedProfiles));
           }
         } else {
-          resolve(new Set(blockedProfiles))
+          resolve(new Set(blockedProfiles));
         }
-      })
-    })
-  }
+      });
+    });
+  };
+  
 
   const hideMatchedPosts = async () => {
     // First check if status is enabled

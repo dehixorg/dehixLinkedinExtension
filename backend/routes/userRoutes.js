@@ -5,6 +5,28 @@ import { Report } from "../models/Report.js";
 
 const router = express.Router();
 
+// Get all Activity Logs
+
+router.get("/activity/:id", async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const user = await User.findOne({ uuid: userId }); // 🔧 changed from find() to findOne()
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const sortedLogs = user.logs;
+    console.log(sortedLogs);
+
+    res.json(sortedLogs);
+  } catch (error) {
+    console.error("Error fetching user logs:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
 // Register or Retrieve User
 router.post("/register", async (req, res) => {
   try {
@@ -53,7 +75,10 @@ router.get("/blocked-posts/:uuid", async (req, res) => {
     } else {
       blockedUsers = [...user.suspiciousPosts, ...user.NotImportantPosts];
     }
-
+    console.log("asdsadasdasdasdasdasdasdasdasdasdasd");
+    
+    console.log(blockedUsers);
+    
     return res.json({ blockedUsers });
   } catch (error) {
     console.error("Error in GET /blocked-users:", error);
