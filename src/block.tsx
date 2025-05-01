@@ -7,9 +7,6 @@ interface BlockedPostsProps {
   uuid: string
 }
 
-
-
-
 export default function BlockedPosts({ onNavigateBack, uuid }: BlockedPostsProps) {
   const [username, setUsername] = useState<string>("")
   const [BlockedPosts, setBlockedPosts] = useState<{ postId: string; userName: string; _id: string }[]>([])
@@ -20,8 +17,8 @@ export default function BlockedPosts({ onNavigateBack, uuid }: BlockedPostsProps
   useEffect(() => {
     const fetchBlockedPosts = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/users/blocked-posts/${uuid}?reportType=spam`)
-        setBlockedPosts(data.BlockedPosts || [])
+        const { data } = await axios.get(`http://localhost:5000/api/users/blocked-posts/${uuid}?reportType=all`)
+        setBlockedPosts(data?.blockedUsers || [])
       } catch (error) {
         setMessage({ text: "Failed to load blocked users.", type: "error" })
       }
