@@ -2,16 +2,40 @@ import { useState, useEffect } from "react"
 import { ChevronDown, AlertTriangle, Shield, Activity, ExternalLink } from "lucide-react"
 import "./style.css"
 
+
 interface FraudDetectionProps {
   onNavigateToBlockedUsers: () => void
   onNavigateToBlockedProfiles: () => void
+  onNavigateToSpamPosts: () => void
+  onNavigateToSpamUser: () => void
 }
 
-export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToBlockedProfiles }: FraudDetectionProps) {
+export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToBlockedProfiles, onNavigateToSpamPosts , onNavigateToSpamUser }: FraudDetectionProps) {
   const [status, setStatus] = useState<boolean>(false)
   const [hideFakePosts, setHideFakePosts] = useState<boolean>(false)
   const [hideSuspiciousPosts, setHideSuspiciousPosts] = useState<boolean>(false)
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
+  const [_, setEnabled] = useState(true); 
+
+
+  const handleLogoClick = () => {
+    const newStatus = !status;
+  
+    // Update local state
+    setStatus(newStatus);
+  
+    // Save to chrome storage
+    if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
+      window.chrome.storage.local.set({ status: newStatus }, () => {
+        window.chrome.runtime.sendMessage({
+          action: "SETTINGS_UPDATED",
+          setting: "status",
+          value: newStatus,
+        });
+      });
+    }
+  };
+  
 
   useEffect(() => {
     // Load saved settings from chrome storage or set default values
@@ -25,6 +49,9 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
         if (data.hideFakePosts !== undefined) setHideFakePosts(data.hideFakePosts)
         if (data.hideSuspiciousPosts !== undefined) setHideSuspiciousPosts(data.hideSuspiciousPosts)
       })
+      window.chrome.storage.local.get(["statusEnabled"], (data) => {
+        setEnabled(data.statusEnabled ?? true);
+      });
     }
   }, [])
 
@@ -55,7 +82,9 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
     <div className="fraud-detection-container">
       <div className={`logo-section ${status ? "logo-active" : "logo-inactive"}`}>
         <div className="logo">
-          <img src="/main-logo.png" alt="Dehix Logo" className="logo-icon" />
+          <img src="/main-logo.png" alt="Dehix Logo" className="logo-icon" 
+          onClick={handleLogoClick}
+          />
         </div>
       </div>
 
@@ -151,10 +180,16 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
                 >
                   <span>Block User</span>
                 </button>
-                <button className="advanced-option-button spam-button-gray" disabled={!status}>
+                <button className="advanced-option-button block-button-red"
+                onClick={onNavigateToSpamPosts}
+                  disabled={!status}
+                >
                   <span>Spam Post</span>
                 </button>
-                <button className="advanced-option-button spam-button-gray" disabled={!status}>
+                <button className="advanced-option-button block-button-red" 
+                onClick={onNavigateToSpamUser}
+                  disabled={!status}
+                >
                   <span>Spam User</span>
                 </button>
               </div>

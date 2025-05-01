@@ -12,6 +12,7 @@ body {
   background-color: transparent !important;
   margin: 0;
   padding: 0;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
@@ -46,6 +47,7 @@ body {
   align-items: center;
   justify-content: center;
   margin: 0 auto;
+  border-radius: 12px;
 }
 
 .app-card {
@@ -537,20 +539,20 @@ input:checked + .toggle-slider:before {
 
 /* Block button styles */
 .block-button-red {
-  background-color: #ec4899;
+  background-color: #f472b6;
 }
 
 .block-button-red:hover:not(:disabled) {
-  background-color: #db2777;
+  background-color: #ec4899;
 }
 
 /* Spam button styles */
-.spam-button-gray {
-  background-color: #4b5563;
+.spam-button-red {
+  background-color: #f472b6;
 }
 
-.spam-button-gray:hover:not(:disabled) {
-  background-color: #374151;
+.spam-button-red:hover:not(:disabled) {
+  background-color: #ec4899;
 }
 
 /* Blocked Users Page */
@@ -873,4 +875,40 @@ input:checked + .toggle-slider:before {
 
 .action-button:hover {
   background-color: #ec4899;
+}
+
+/* Spam Users Page */
+
+.spam-users-container {
+  background-color: #2e2a4a;
+  color: white;
+  min-height: 300px;
+  padding: 16px;
+}
+
+.spam-users-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+
+.spam-button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0 16px;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.Spam-users-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
