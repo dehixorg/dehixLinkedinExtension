@@ -19,7 +19,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
         console.log("UUID Stored:", response.uuid);
       } catch (error) {
-        console.error("User registration failed:", error);
+        //console.error("User registration failed:", error);
       }
     } else if (data.statusEnabled === undefined) {
       chrome.storage.local.set({ statusEnabled: true });
