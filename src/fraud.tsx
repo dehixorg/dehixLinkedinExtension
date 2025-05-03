@@ -28,7 +28,7 @@ export default function FraudDetection({
   const [status, setStatus] = useState<boolean>(false)
   const [hideFakePosts, setHideFakePosts] = useState<boolean>(false)
   const [hideSuspiciousPosts, setHideSuspiciousPosts] = useState<boolean>(false)
-  const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
+  const [advancedOpen, setAdvancedOpen] = useState<boolean>(true)
   const [_, setEnabled] = useState(true)
 
   const handleLogoClick = () => {
@@ -55,7 +55,7 @@ export default function FraudDetection({
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.chrome?.storage) {
-      window.chrome.storage.local.get(["status", "hideFakePosts", "hideSuspiciousPosts"], (data: any) => {
+      window.chrome.storage.local.get(["status", "hideFakePosts", "hideSuspiciousPosts" , "advancedOpen"], (data: any) => {
         if (data.status !== undefined) setStatus(data.status)
         else {
           setStatus(true)
@@ -63,6 +63,12 @@ export default function FraudDetection({
         }
         if (data.hideFakePosts !== undefined) setHideFakePosts(data.hideFakePosts)
         if (data.hideSuspiciousPosts !== undefined) setHideSuspiciousPosts(data.hideSuspiciousPosts)
+
+        if (data.advancedOpen !== undefined) setAdvancedOpen(data.advancedOpen)
+        else {
+          setAdvancedOpen(true)
+          window.chrome.storage.local.set({ advancedOpen: true })
+        }
       })
       window.chrome.storage.local.get(["statusEnabled"], (data) => {
         setEnabled(data.statusEnabled ?? true)
@@ -197,7 +203,15 @@ export default function FraudDetection({
         </div>
 
         <div className="custom-accordion">
-          <div className="accordion-header" onClick={() => setAdvancedOpen(!advancedOpen)}>
+        <div
+          className="accordion-header"
+          onClick={() => {
+            const newVal = !advancedOpen
+            setAdvancedOpen(newVal)
+            if (typeof window !== "undefined" && window.chrome?.storage) {
+              window.chrome.storage.local.set({ advancedOpen: newVal })
+          }
+          }}>
             <div className="accordion-title">
               <span>Advanced Settings</span>
             </div>
