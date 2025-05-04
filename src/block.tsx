@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useCallback } from "react"
 import { ArrowLeft, User, X, Loader2 } from "lucide-react"
 import axios from "axios"
@@ -8,9 +6,6 @@ interface BlockedPostsProps {
   onNavigateBack: () => void
   uuid: string
 }
-
-
-
 
 export default function BlockedPosts({ onNavigateBack, uuid }: BlockedPostsProps) {
   const [username, setUsername] = useState<string>("")
@@ -22,8 +17,8 @@ export default function BlockedPosts({ onNavigateBack, uuid }: BlockedPostsProps
   useEffect(() => {
     const fetchBlockedPosts = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/users/blocked-posts/${uuid}?reportType=spam`)
-        setBlockedPosts(data.BlockedPosts || [])
+        const { data } = await axios.get(`http://localhost:5000/api/users/blocked-posts/${uuid}?reportType=all`)
+        setBlockedPosts(data?.blockedUsers || [])
       } catch (error) {
         setMessage({ text: "Failed to load blocked users.", type: "error" })
       }

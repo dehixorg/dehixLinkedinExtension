@@ -1,32 +1,100 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronDown, AlertTriangle, Shield, Activity, ExternalLink } from "lucide-react"
+import {
+  ChevronDown,
+  AlertTriangle,
+  Shield,
+  Activity,
+  ExternalLink
+} from "lucide-react"
 import "./style.css"
 
 interface FraudDetectionProps {
   onNavigateToBlockedUsers: () => void
   onNavigateToBlockedProfiles: () => void
+  onNavigateToSpamPosts: () => void
+  onNavigateToSpamUser: () => void
+  onNavigateToActivityLogs: () => void
 }
 
-export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToBlockedProfiles }: FraudDetectionProps) {
+export default function FraudDetection({
+  onNavigateToBlockedUsers,
+  onNavigateToBlockedProfiles,
+  onNavigateToSpamPosts,
+  onNavigateToSpamUser,
+  onNavigateToActivityLogs
+}: FraudDetectionProps) {
   const [status, setStatus] = useState<boolean>(false)
   const [hideFakePosts, setHideFakePosts] = useState<boolean>(false)
   const [hideSuspiciousPosts, setHideSuspiciousPosts] = useState<boolean>(false)
-  const [advancedOpen, setAdvancedOpen] = useState<boolean>(false)
+  const [advancedOpen, setAdvancedOpen] = useState<boolean>(true)
+  const [_, setEnabled] = useState(true)
+
+  const handleLogoClick = () => {
+    const newStatus = !status
+
+    setStatus(newStatus)
+
+    if (typeof window !== "undefined" && window.chrome?.storage) {
+      window.chrome.storage.local.set({ status: newStatus }, () => {
+        window.chrome.runtime?.sendMessage({
+          action: "SETTINGS_UPDATED",
+          setting: "status",
+          value: newStatus,
+        })
+      })
+    }
+  }
+
+  const [toggleCounts, setToggleCounts] = useState<Record<string, number[]>>({
+    status: [],
+    hideFakePosts: [],
+    hideSuspiciousPosts: [],
+  })
 
   useEffect(() => {
-    // Load saved settings from chrome storage
-    if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
-      window.chrome.storage.local.get(["status", "hideFakePosts", "hideSuspiciousPosts"], (data: any) => {
+    if (typeof window !== "undefined" && window.chrome?.storage) {
+      window.chrome.storage.local.get(["status", "hideFakePosts", "hideSuspiciousPosts" , "advancedOpen"], (data: any) => {
         if (data.status !== undefined) setStatus(data.status)
+        else {
+          setStatus(true)
+          window.chrome.storage.local.set({ status: true })
+        }
         if (data.hideFakePosts !== undefined) setHideFakePosts(data.hideFakePosts)
         if (data.hideSuspiciousPosts !== undefined) setHideSuspiciousPosts(data.hideSuspiciousPosts)
+
+        if (data.advancedOpen !== undefined) setAdvancedOpen(data.advancedOpen)
+        else {
+          setAdvancedOpen(true)
+          window.chrome.storage.local.set({ advancedOpen: true })
+        }
+      })
+      window.chrome.storage.local.get(["statusEnabled"], (data) => {
+        setEnabled(data.statusEnabled ?? true)
       })
     }
   }, [])
 
+  const isRateLimited = (setting: string): boolean => {
+    const now = Date.now()
+    const oneMinuteAgo = now - 60000
+    const recentToggles = toggleCounts[setting]?.filter((t) => t > oneMinuteAgo) || []
+    return recentToggles.length >= 10
+  }
+
   const handleToggle = (setting: string, value: boolean) => {
+    if (isRateLimited(setting)) {
+      alert(`You're toggling too frequently. Please wait a moment before toggling again.`)
+      return
+    }
+
+    const now = Date.now()
+    setToggleCounts((prev) => ({
+      ...prev,
+      [setting]: [...(prev[setting] || []), now],
+    }))
+
     switch (setting) {
       case "status":
         setStatus(value)
@@ -37,30 +105,37 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
       case "hideSuspiciousPosts":
         setHideSuspiciousPosts(value)
         break
-      default:
-        break
     }
 
-    // Save to chrome storage
-    if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
-      window.chrome.storage.local.set({ [setting]: value }, () => {
-        window.chrome.runtime.sendMessage({ action: "SETTINGS_UPDATED", setting, value })
+    if (typeof window !== "undefined" && window.chrome?.runtime) {
+      window.chrome.runtime.sendMessage({
+        action: "SETTINGS_UPDATED",
+        setting,
+        value,
       })
+    }
+
+    if (typeof window !== "undefined" && window.chrome?.storage) {
+      window.chrome.storage.local.set({ [setting]: value })
     }
   }
 
   return (
     <div className="fraud-detection-container">
-      <div className="logo-section">
+      <div className={`logo-section ${status ? "logo-active" : "logo-inactive"}`}>
         <div className="logo">
-          <img src="/main-logo.png" alt="Dehix Logo" className="logo-icon" />
+          <img
+            src="/main-logo.png"
+            alt="Dehix Logo"
+            className="logo-icon"
+            onClick={handleLogoClick}
+          />
         </div>
       </div>
 
       <div className="content-section">
         <h1 className="title">Dehix Fraud Detector</h1>
 
-        {/* Main Settings */}
         <div className="settings-card">
           <div className="toggle-list">
             <div className="toggle-item">
@@ -69,7 +144,11 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
                 <span>Status</span>
               </div>
               <label className="switch">
-                <input type="checkbox" checked={status} onChange={(e) => handleToggle("status", e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={status}
+                  onChange={(e) => handleToggle("status", e.target.checked)}
+                />
                 <span className="slider"></span>
               </label>
             </div>
@@ -84,6 +163,7 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
                   type="checkbox"
                   checked={hideFakePosts}
                   onChange={(e) => handleToggle("hideFakePosts", e.target.checked)}
+                  disabled={!status}
                 />
                 <span className="slider"></span>
               </label>
@@ -99,6 +179,7 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
                   type="checkbox"
                   checked={hideSuspiciousPosts}
                   onChange={(e) => handleToggle("hideSuspiciousPosts", e.target.checked)}
+                  disabled={!status}
                 />
                 <span className="slider"></span>
               </label>
@@ -106,25 +187,31 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="button-group">
-          <button className="action-button">
-            <div className="button-content">
+          <button className="action-button" disabled={!status}>
+            <div className="button-content" onClick={onNavigateToActivityLogs}>
               <Activity size={16} className="button-icon" />
-              <span>View activity</span>
+              <span>activity</span>
             </div>
           </button>
           <button className="action-button">
             <div className="button-content">
               <ExternalLink size={16} className="button-icon" />
-              <span>Visit Dehix</span>
+              <span>Dehix</span>
             </div>
           </button>
         </div>
 
-        {/* Advanced Settings Accordion */}
         <div className="custom-accordion">
-          <div className="accordion-header" onClick={() => setAdvancedOpen(!advancedOpen)}>
+        <div
+          className="accordion-header"
+          onClick={() => {
+            const newVal = !advancedOpen
+            setAdvancedOpen(newVal)
+            if (typeof window !== "undefined" && window.chrome?.storage) {
+              window.chrome.storage.local.set({ advancedOpen: newVal })
+          }
+          }}>
             <div className="accordion-title">
               <span>Advanced Settings</span>
             </div>
@@ -139,10 +226,18 @@ export default function FraudDetection({ onNavigateToBlockedUsers, onNavigateToB
                 <button className="advanced-option-button block-button-red" onClick={onNavigateToBlockedProfiles}>
                   <span>Block User</span>
                 </button>
-                <button className="advanced-option-button spam-button-gray">
+                <button
+                  className="advanced-option-button block-button-red"
+                  onClick={onNavigateToSpamPosts}
+                  disabled={!status}
+                >
                   <span>Spam Post</span>
                 </button>
-                <button className="advanced-option-button spam-button-gray">
+                <button
+                  className="advanced-option-button block-button-red"
+                  onClick={onNavigateToSpamUser}
+                  disabled={!status}
+                >
                   <span>Spam User</span>
                 </button>
               </div>

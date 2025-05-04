@@ -1,16 +1,21 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import FraudDetection from "./fraud"
 import BlockedPosts from "./block"
+import SpamPosts from "./spam"
 import BlockedProfiles from "./block-profile"
+import SpamUser from "./spamuser"
 import "./style.css"
 import LoginContainer from "./login"
+import ActivityLogs from "./activity"
 
-// Declare chrome if it's not available in the current environment (e.g., testing)
-
-
-type PageType = "fraud-detection" | "blocked-posts" | "blocked-profiles"
+// Define all pages from both branches
+type PageType =
+  | "fraud-detection"
+  | "blocked-posts"
+  | "blocked-profiles"
+  | "spam-posts"
+  | "spam-user"
+  | "activity-logs"
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<PageType>("fraud-detection")
@@ -40,12 +45,21 @@ export default function Home() {
           <FraudDetection
             onNavigateToBlockedUsers={() => setCurrentPage("blocked-posts")}
             onNavigateToBlockedProfiles={() => setCurrentPage("blocked-profiles")}
+            onNavigateToSpamPosts={() => setCurrentPage("spam-posts")}
+            onNavigateToSpamUser={() => setCurrentPage("spam-user")}
+            onNavigateToActivityLogs={() => setCurrentPage("activity-logs")}
           />
+        ) : currentPage === "spam-posts" ? (
+          <SpamPosts onNavigateBack={() => setCurrentPage("fraud-detection")} uuid={uuid || ""} />
+        ) : currentPage === "spam-user" ? (
+          <SpamUser onNavigateBack={() => setCurrentPage("fraud-detection")} uuid={uuid || ""} />
         ) : currentPage === "blocked-posts" ? (
           <BlockedPosts onNavigateBack={() => setCurrentPage("fraud-detection")} uuid={uuid || ""} />
-        ) : (
+        ) : currentPage === "blocked-profiles" ? (
           <BlockedProfiles onNavigateBack={() => setCurrentPage("fraud-detection")} uuid={uuid || ""} />
-        )}
+        ) : currentPage === "activity-logs" ? (
+          <ActivityLogs onNavigateBack={() => setCurrentPage("fraud-detection")} uuid={uuid || ""} />
+        ) : null}
       </div>
     </main>
   )

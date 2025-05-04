@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useCallback } from "react"
 import { ArrowLeft, User, X, Loader2 } from "lucide-react"
 import axios from "axios"
@@ -51,21 +49,43 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
     }
   }, [message])
 
+  const isValidLinkedInURL = (url: string) => {
+    const regex = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?$/;
+    return regex.test(url);
+  }
+
   const handleBlockProfile = useCallback(async () => {
-    if (!username.trim()) {
-      return setMessage({ text: "Please enter a username.", type: "error" })
+    const trimmedUsername = username.trim()
+  
+    if (!trimmedUsername) {
+      return setMessage({ text: "Please enter a LinkedIn profile URL.", type: "error" })
     }
-
+  
+    if (!isValidLinkedInURL(trimmedUsername)) {
+      return setMessage({
+        text: "Enter a valid LinkedIn URL (e.g., https://www.linkedin.com/in/username)",
+        type: "error",
+      })
+    }
+  
+    // Extract LinkedIn username
+    const usernameMatch = trimmedUsername.match(/linkedin\.com\/in\/([^\/]+)/)
+    const extractedUsername = usernameMatch ? usernameMatch[1] : ""
+  
+    if (!extractedUsername) {
+      return setMessage({ text: "Could not extract username from URL.", type: "error" })
+    }
+  
     setLoading((prev) => ({ ...prev, blocking: true }))
-
+  
     try {
       const { data } = await axios.post("http://localhost:5000/api/users/block-user", {
         uuid,
-        targetUserName: username.trim(),
+        targetUserName: extractedUsername,
         blockType: "suspicious",
       })
-
-      setBlockedProfiles((prev) => [...prev, { userName: username.trim(), _id: Date.now().toString() }])
+  
+      setBlockedProfiles((prev) => [...prev, { userName: extractedUsername, _id: Date.now().toString() }])
       setMessage({ text: data.message, type: "success" })
       setUsername("")
     } catch (error: any) {
@@ -77,6 +97,7 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
       setLoading((prev) => ({ ...prev, blocking: false }))
     }
   }, [username, uuid])
+  
 
   const handleRemoveProfile = useCallback(
     async (userName: string) => {
@@ -112,7 +133,7 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
         <div className="input-group">
           <input
             type="text"
-            placeholder="Enter username to block"
+            placeholder="Enter LinkedIn profile URL"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="text-input"
@@ -137,7 +158,7 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
                   <div className="user-info">
                     <User className="user-icon" />
                     <div>
-                      <span className="user-name">{profile.userName}</span>
+                      <span className="user-name">{profile.userName.substring(0,10)}</span>
                     </div>
                   </div>
                   <button
