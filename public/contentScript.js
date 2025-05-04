@@ -1,4 +1,4 @@
-;(() => {
+(() => {
   const API_BASE_URL = "http://localhost:5000/api/users"
   let lastProcessedUrl = location.href
   const processedPosts = new Set()
@@ -26,48 +26,65 @@
     return match ? match[1] : null
   }
 
-  // Get blocked post IDs from storage and API
-  const getBlockedPostIds = () => {
+  // Extract LinkedIn Username from URL or post
+  const extractUsername = (str) => {
+    const match = str?.match(/\/in\/([^\/?]+)/)
+    return match ? match[1] : null
+  }
+
+  // Get blocked user IDs and usernames from storage and API
+  const getBlockedUsernamesAndPostIds = () => {
     return new Promise((resolve) => {
       if (!isExtensionContext()) {
         console.log("Running in non-extension context, using empty blocklist")
-        return resolve(new Set())
+        return resolve({ usernames: new Set(), postIds: new Set() })
       }
-
+  
       try {
-        chrome.storage.local.get(["reportedPosts", "uuid"], async ({ reportedPosts = [], uuid }) => {
+        chrome.storage.local.get(["reportedPosts", "reportedUsernames", "uuid"], async ({ reportedPosts = [], reportedUsernames = [], uuid }) => {
           if (uuid) {
             try {
-              const res = await fetch(`${API_BASE_URL}/blocked-posts/${uuid}?reportType=all`)
+              const res = await fetch(`${API_BASE_URL}/blocked-users/${uuid}?reportType=all`)
               const data = await res.json()
-              const apiIds = (data?.blockedUsers || []).map((u) => u.postId)
-              resolve(new Set([...reportedPosts, ...apiIds]))
+              const apiUsernames = (data?.blockedUsers || []).map((user) => user.userName)
+              const apiPostIds = (data?.blockedUsers || []).map((user) => user.postId)
+  
+              resolve({
+                usernames: new Set([...reportedUsernames, ...apiUsernames]),
+                postIds: new Set([...reportedPosts, ...apiPostIds]),
+              })
             } catch (e) {
               console.warn("API fetch error, falling back to local storage:", e)
-              resolve(new Set(reportedPosts))
+              resolve({
+                usernames: new Set(reportedUsernames),
+                postIds: new Set(reportedPosts),
+              })
             }
           } else {
-            resolve(new Set(reportedPosts))
+            resolve({
+              usernames: new Set(reportedUsernames),
+              postIds: new Set(reportedPosts),
+            })
           }
         })
       } catch (e) {
         console.warn("Chrome storage access error:", e)
-        resolve(new Set())
+        resolve({ usernames: new Set(), postIds: new Set() })
       }
     })
   }
+  
 
-  // Hide posts with blocked IDs - Only hide when status is ON
-  const hideMatchedPosts = async (status, hideFakePosts, hideSuspiciousPosts) => {
-    // Skip execution if status is off - don't hide posts when status is off
+  // Hide posts and chats of blocked users
+  const hideMatchedPostsAndChats = async (status) => {
     if (!status) {
-      console.log("Fraud detection is off. Not hiding any posts.")
+      console.log("Fraud detection is off. Not hiding any posts or chats.")
       return
     }
 
-    // Get blocked IDs only if status is on
-    const blockedIds = await getBlockedPostIds()
+    const { usernames, postIds } = await getBlockedUsernamesAndPostIds()
 
+    // Hide posts in the feed
     const allPosts = [
       ...document.querySelectorAll("div[data-id^='urn:li:activity:']"),
       ...document.querySelectorAll("div[data-urn^='urn:li:activity:']"),
@@ -77,11 +94,46 @@
       const rawId = post.getAttribute("data-id") || post.getAttribute("data-urn")
       const postId = extractPostId(rawId)
 
-      if (postId && blockedIds.has(postId) && !processedPosts.has(postId)) {
+      let username = null
+      // Existing anchor extraction
+      const anchorTags = post.querySelectorAll("a[href*='/in/']")
+      for (const a of anchorTags) {
+        const extracted = extractUsername(a.href)
+        if (extracted) {
+          username = extracted
+          break
+        }
+      }
+
+      // Add fallback: Try checking LinkedIn handle from the data-* attributes or divs
+      if (!username) {
+        const potentialText = post.textContent || ""
+        usernames.forEach((blockedUsername) => {
+          if (potentialText.includes(blockedUsername)) {
+            username = blockedUsername
+          }
+        })
+      }
+
+
+      if ((postId && postIds.has(postId)) || (username && usernames.has(username)) && !processedPosts.has(postId)) {
         post.style.display = "none"
         post.classList.add("reported-hidden")
         processedPosts.add(postId)
-        console.log("Post hidden:", postId)
+        console.log("Post hidden:", postId, username)
+      }
+    })
+
+
+    // Hide chat messages from blocked users
+    const allMessages = document.querySelectorAll("div[data-test-id='message-item']")
+    allMessages.forEach((message) => {
+      const messageSender = message.querySelector("span.actor-name")
+      const senderUsername = messageSender ? messageSender.textContent : null
+
+      if (senderUsername && usernames.has(senderUsername)) {
+        message.style.display = "none"
+        console.log("Message hidden:", senderUsername)
       }
     })
 
@@ -93,13 +145,13 @@
     }
   }
 
-  // Observe dynamic content (scroll, new posts)
-  const observePostChanges = (status, hideFakePosts, hideSuspiciousPosts) => {
+  // Observe dynamic content (scroll, new posts, chat messages)
+  const observeContentChanges = (status) => {
     let timeout
     const observer = new MutationObserver(() => {
       clearTimeout(timeout)
       timeout = setTimeout(() => {
-        hideMatchedPosts(status, hideFakePosts, hideSuspiciousPosts)
+        hideMatchedPostsAndChats(status)
       }, 100) // debounce to avoid flooding
     })
 
@@ -118,12 +170,9 @@
 
         if (isExtensionContext()) {
           try {
-            chrome.storage.local.get(
-              ["status", "hideFakePosts", "hideSuspiciousPosts"],
-              ({ status, hideFakePosts, hideSuspiciousPosts }) => {
-                hideMatchedPosts(status, hideFakePosts, hideSuspiciousPosts)
-              },
-            )
+            chrome.storage.local.get(["status"], ({ status }) => {
+              hideMatchedPostsAndChats(status)
+            })
           } catch (e) {
             console.warn("Error accessing chrome storage:", e)
           }
@@ -136,25 +185,18 @@
   const initializeExtension = () => {
     try {
       if (isExtensionContext()) {
-        chrome.storage.local.get(
-          ["status", "hideFakePosts", "hideSuspiciousPosts"],
-          ({ status, hideFakePosts, hideSuspiciousPosts }) => {
-            // Only start observers - actual hiding depends on status
-            hideMatchedPosts(status, hideFakePosts, hideSuspiciousPosts)
-            observePostChanges(status, hideFakePosts, hideSuspiciousPosts)
-            watchUrlChange()
-          },
-        )
+        chrome.storage.local.get(["status"], ({ status }) => {
+          hideMatchedPostsAndChats(status)
+          observeContentChanges(status)
+          watchUrlChange()
+        })
 
         // Listen for runtime messages from popup
         chrome.runtime.onMessage.addListener((message) => {
           if (message.action === "SETTINGS_UPDATED") {
-            chrome.storage.local.get(
-              ["status", "hideFakePosts", "hideSuspiciousPosts"],
-              ({ status, hideFakePosts, hideSuspiciousPosts }) => {
-                hideMatchedPosts(status, hideFakePosts, hideSuspiciousPosts)
-              },
-            )
+            chrome.storage.local.get(["status"], ({ status }) => {
+              hideMatchedPostsAndChats(status)
+            })
           }
         })
       } else {
