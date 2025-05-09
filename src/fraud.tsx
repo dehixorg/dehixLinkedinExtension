@@ -246,10 +246,12 @@ export default function FraudDetection({
             </div>
           </button>
           <button className="action-button">
-            <div className="button-content">
-              <ExternalLink size={16} className="button-icon" />
-              <span>Dehix</span>
-            </div>
+            <a href="http://dehix.org/" target="_blank" rel="noopener noreferrer">
+              <div className="button-content">
+                <ExternalLink size={16} className="button-icon" />
+                <span>Dehix</span>
+              </div>
+            </a>
           </button>
         </div>
 

@@ -461,6 +461,11 @@ input:checked + .toggle-slider:before {
   flex: 1;
 }
 
+a{
+  text-decoration: none;
+  color: white;
+}
+
 .action-button:hover {
   background-color: #ec4899;
 }
