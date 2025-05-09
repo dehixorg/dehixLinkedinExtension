@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { ArrowLeft, User, X, Loader2 } from "lucide-react"
-import axios from "axios"
+import { blockUser, fetchBlockedUsers, unblockUser } from "../utils/api-service"
 
 interface BlockedProfilesProps {
   onNavigateBack: () => void
@@ -30,8 +30,8 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
   useEffect(() => {
     const fetchBlockedProfiles = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/users/blocked-users/${uuid}?blockType=suspicious`)
-        setBlockedProfiles(data.blockedUsers || [])
+        const users = await fetchBlockedUsers(uuid, "suspicious")
+        setBlockedProfiles(users || [])
       } catch (error) {
         setMessage({ text: "Failed to load blocked profiles.", type: "error" })
       }
@@ -50,43 +50,50 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
   }, [message])
 
   const isValidLinkedInURL = (url: string) => {
-    const regex = /^https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?$/;
-    return regex.test(url);
+    const trimmed = url.trim()
+    return /^https:\/\/(www\.)?linkedin\.com\/(in|company)\/[a-zA-Z0-9_-]+/.test(trimmed)
   }
+
 
   const handleBlockProfile = useCallback(async () => {
     const trimmedUsername = username.trim()
-  
+
     if (!trimmedUsername) {
       return setMessage({ text: "Please enter a LinkedIn profile URL.", type: "error" })
     }
-  
+
     if (!isValidLinkedInURL(trimmedUsername)) {
       return setMessage({
-        text: "Enter a valid LinkedIn URL (e.g., https://www.linkedin.com/in/username)",
+        text: "Enter a valid LinkedIn URL (e.g., https://www.linkedin.com/in/username or /company/companyname)",
         type: "error",
       })
     }
-  
-    // Extract LinkedIn username
-    const usernameMatch = trimmedUsername.match(/linkedin\.com\/in\/([^\/]+)/)
-    const extractedUsername = usernameMatch ? usernameMatch[1] : ""
-  
+
+    const usernameMatch = trimmedUsername.match(/linkedin\.com\/(in|company)\/([^\/?]+)/)
+    const extractedUsername = usernameMatch ? usernameMatch[2] : ""
+
     if (!extractedUsername) {
       return setMessage({ text: "Could not extract username from URL.", type: "error" })
     }
-  
+
+
+    if (!extractedUsername) {
+      return setMessage({ text: "Could not extract username from URL.", type: "error" })
+    }
+
     setLoading((prev) => ({ ...prev, blocking: true }))
-  
+
     try {
-      const { data } = await axios.post("http://localhost:5000/api/users/block-user", {
-        uuid,
-        targetUserName: extractedUsername,
-        blockType: "suspicious",
-      })
-  
+      await blockUser(uuid, extractedUsername, "suspicious")
+
       setBlockedProfiles((prev) => [...prev, { userName: extractedUsername, _id: Date.now().toString() }])
-      setMessage({ text: data.message, type: "success" })
+      // after successful API call
+      chrome.storage.local.get(["reportedUsernames"], ({ reportedUsernames = [] }) => {
+        const updatedUsernames = [...reportedUsernames, extractedUsername]
+        chrome.storage.local.set({ reportedUsernames: updatedUsernames })
+      })
+
+      setMessage({ text: "User marked as block successfully", type: "success" })
       setUsername("")
     } catch (error: any) {
       setMessage({
@@ -97,14 +104,14 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
       setLoading((prev) => ({ ...prev, blocking: false }))
     }
   }, [username, uuid])
-  
+
 
   const handleRemoveProfile = useCallback(
     async (userName: string) => {
       setLoading((prev) => ({ ...prev, unblocking: userName }))
 
       try {
-        await axios.delete(`http://localhost:5000/api/users/block-user/${uuid}/${userName}?blockType=suspicious`)
+        await unblockUser(uuid, userName, "suspicious")
 
         setBlockedProfiles((prev) => prev.filter((profile) => profile.userName !== userName))
         setMessage({ text: "Profile unblocked successfully.", type: "success" })
@@ -158,7 +165,7 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
                   <div className="user-info">
                     <User className="user-icon" />
                     <div>
-                      <span className="user-name">{profile.userName.substring(0,10)}</span>
+                      <span className="user-name">{profile.userName.substring(0, 10)}</span>
                     </div>
                   </div>
                   <button

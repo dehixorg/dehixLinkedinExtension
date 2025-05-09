@@ -75,13 +75,11 @@ router.get("/blocked-posts/:uuid", async (req, res) => {
     } else {
       blockedUsers = [...user.suspiciousPosts, ...user.NotImportantPosts];
     }
-    console.log("asdsadasdasdasdasdasdasdasdasdasdasd");
-    
-    console.log(blockedUsers);
+    console.log("hi");
     
     return res.json({ blockedUsers });
   } catch (error) {
-    console.error("Error in GET /blocked-users:", error);
+    console.error("Error in GET /blocked-posts:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -107,7 +105,8 @@ router.get("/blocked-users/:uuid", async (req, res) => {
     } else {
       blockedUsers = [...user.suspiciousUsers, ...user.spamUsers];
     }
-
+    console.log("hi");
+    
     return res.json({ blockedUsers });
   } catch (error) {
     console.error("Error in GET /blocked-users:", error);
