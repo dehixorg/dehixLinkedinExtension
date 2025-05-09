@@ -75,9 +75,7 @@ router.get("/blocked-posts/:uuid", async (req, res) => {
     } else {
       blockedUsers = [...user.suspiciousPosts, ...user.NotImportantPosts];
     }
-    console.log("asdsadasdasdasdasdasdasdasdasdasdasd");
-    
-    console.log(blockedUsers);
+    console.log("hi");
     
     return res.json({ blockedUsers });
   } catch (error) {
@@ -107,7 +105,7 @@ router.get("/blocked-users/:uuid", async (req, res) => {
     } else {
       blockedUsers = [...user.suspiciousUsers, ...user.spamUsers];
     }
-    console.log(blockedUsers);
+    console.log("hi");
     
     return res.json({ blockedUsers });
   } catch (error) {

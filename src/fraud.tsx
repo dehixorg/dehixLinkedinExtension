@@ -1,12 +1,7 @@
 import { useState, useEffect } from "react"
-import {
-  ChevronDown,
-  AlertTriangle,
-  Shield,
-  Activity,
-  ExternalLink
-} from "lucide-react"
+import { ChevronDown, AlertTriangle, Shield, Activity, ExternalLink } from "lucide-react"
 import "./style.css"
+import { fetchBlockedUsers, fetchBlockedPosts, type BlockedUser, type BlockedPost } from "../utils/api-service"
 
 interface FraudDetectionProps {
   onNavigateToBlockedUsers: () => void
@@ -21,13 +16,99 @@ export default function FraudDetection({
   onNavigateToBlockedProfiles,
   onNavigateToSpamPosts,
   onNavigateToSpamUser,
-  onNavigateToActivityLogs
+  onNavigateToActivityLogs,
 }: FraudDetectionProps) {
   const [status, setStatus] = useState<boolean>(false)
   const [hideFakePosts, setHideFakePosts] = useState<boolean>(false)
   const [hideSuspiciousPosts, setHideSuspiciousPosts] = useState<boolean>(false)
   const [advancedOpen, setAdvancedOpen] = useState<boolean>(true)
   const [_, setEnabled] = useState(true)
+  const [uuid, setUuid] = useState<string>("")
+  const [, setBlockedUsers] = useState<BlockedUser[]>([])
+  const [, setBlockedPosts] = useState<BlockedPost[]>([])
+  const [, setSpamPosts] = useState<BlockedPost[]>([])
+  const [, setSpamUsers] = useState<BlockedUser[]>([])
+
+  // Fetch data from API and update storage
+  const fetchAndUpdateData = async () => {
+    if (!uuid) return
+
+    try {
+      // Fetch suspicious users
+      const suspiciousUsers = await fetchBlockedUsers(uuid, "suspicious")
+      // Fetch spam users
+      const spamUsersList = await fetchBlockedUsers(uuid, "spam")
+      // Fetch not useful posts
+      const notUsefulPosts = await fetchBlockedPosts(uuid, "notUseful")
+      // Fetch spam posts
+      const spamPostsList = await fetchBlockedPosts(uuid, "spam")
+
+      setBlockedUsers(suspiciousUsers)
+      setSpamUsers(spamUsersList)
+      setBlockedPosts(notUsefulPosts)
+      setSpamPosts(spamPostsList)
+
+      // Update chrome storage with the fetched data
+      if (typeof window !== "undefined" && window.chrome?.storage) {
+        const reportedUsernames = suspiciousUsers.map((user:any) => user.userName)
+        const spamUsernames = spamUsersList.map((user:any) => user.userName)
+        const reportedPosts = notUsefulPosts.map((post:any) => post.postId)
+        const spamPostIds = spamPostsList.map((post:any) => post.postId)
+
+        window.chrome.storage.local.set(
+          {
+            reportedUsernames,
+            spamUsernames,
+            reportedPosts,
+            spamPosts: spamPostIds,
+          },
+          () => {
+            // Notify content script to re-evaluate posts with new data
+            window.chrome.runtime?.sendMessage({
+              action: "RE_EVALUATE_POSTS",
+            })
+          },
+        )
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error)
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.chrome?.storage) {
+      window.chrome.storage.local.get(
+        ["status", "hideFakePosts", "hideSuspiciousPosts", "advancedOpen", "uuid"],
+        (data: any) => {
+          if (data.status !== undefined) setStatus(data.status)
+          else {
+            setStatus(true)
+            window.chrome.storage.local.set({ status: true })
+          }
+          if (data.hideFakePosts !== undefined) setHideFakePosts(data.hideFakePosts)
+          if (data.hideSuspiciousPosts !== undefined) setHideSuspiciousPosts(data.hideSuspiciousPosts)
+          if (data.advancedOpen !== undefined) setAdvancedOpen(data.advancedOpen)
+          else {
+            setAdvancedOpen(true)
+            window.chrome.storage.local.set({ advancedOpen: true })
+          }
+          if (data.uuid) {
+            setUuid(data.uuid)
+          }
+        },
+      )
+      window.chrome.storage.local.get(["statusEnabled"], (data) => {
+        setEnabled(data.statusEnabled ?? true)
+      })
+    }
+  }, [])
+
+  // Fetch data when uuid changes
+  useEffect(() => {
+    if (uuid) {
+      fetchAndUpdateData()
+    }
+  }, [uuid])
 
   const handleLogoClick = () => {
     const newStatus = !status
@@ -50,29 +131,6 @@ export default function FraudDetection({
     hideFakePosts: [],
     hideSuspiciousPosts: [],
   })
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.chrome?.storage) {
-      window.chrome.storage.local.get(["status", "hideFakePosts", "hideSuspiciousPosts" , "advancedOpen"], (data: any) => {
-        if (data.status !== undefined) setStatus(data.status)
-        else {
-          setStatus(true)
-          window.chrome.storage.local.set({ status: true })
-        }
-        if (data.hideFakePosts !== undefined) setHideFakePosts(data.hideFakePosts)
-        if (data.hideSuspiciousPosts !== undefined) setHideSuspiciousPosts(data.hideSuspiciousPosts)
-
-        if (data.advancedOpen !== undefined) setAdvancedOpen(data.advancedOpen)
-        else {
-          setAdvancedOpen(true)
-          window.chrome.storage.local.set({ advancedOpen: true })
-        }
-      })
-      window.chrome.storage.local.get(["statusEnabled"], (data) => {
-        setEnabled(data.statusEnabled ?? true)
-      })
-    }
-  }, [])
 
   const isRateLimited = (setting: string): boolean => {
     const now = Date.now()
@@ -122,12 +180,7 @@ export default function FraudDetection({
     <div className="fraud-detection-container">
       <div className={`logo-section ${status ? "logo-active" : "logo-inactive"}`}>
         <div className="logo">
-          <img
-            src="/main-logo.png"
-            alt="Dehix Logo"
-            className="logo-icon"
-            onClick={handleLogoClick}
-          />
+          <img src="/main-logo.png" alt="Dehix Logo" className="logo-icon" onClick={handleLogoClick} />
         </div>
       </div>
 
@@ -142,11 +195,7 @@ export default function FraudDetection({
                 <span>Status</span>
               </div>
               <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={status}
-                  onChange={(e) => handleToggle("status", e.target.checked)}
-                />
+                <input type="checkbox" checked={status} onChange={(e) => handleToggle("status", e.target.checked)} />
                 <span className="slider"></span>
               </label>
             </div>
@@ -201,15 +250,16 @@ export default function FraudDetection({
         </div>
 
         <div className="custom-accordion">
-        <div
-          className="accordion-header"
-          onClick={() => {
-            const newVal = !advancedOpen
-            setAdvancedOpen(newVal)
-            if (typeof window !== "undefined" && window.chrome?.storage) {
-              window.chrome.storage.local.set({ advancedOpen: newVal })
-          }
-          }}>
+          <div
+            className="accordion-header"
+            onClick={() => {
+              const newVal = !advancedOpen
+              setAdvancedOpen(newVal)
+              if (typeof window !== "undefined" && window.chrome?.storage) {
+                window.chrome.storage.local.set({ advancedOpen: newVal })
+              }
+            }}
+          >
             <div className="accordion-title">
               <span>Advanced Settings</span>
             </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { ArrowLeft, User, X, Loader2 } from "lucide-react"
-import axios from "axios"
+import { blockPost, fetchBlockedPosts, unblockPost } from "../utils/api-service"
 
 interface BlockedPostsProps {
   onNavigateBack: () => void
@@ -15,17 +15,18 @@ export default function BlockedPosts({ onNavigateBack, uuid }: BlockedPostsProps
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
 
   useEffect(() => {
-    const fetchBlockedPosts = async () => {
+    const fetchPosts = async () => {
+      if (!uuid) return
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/users/blocked-posts/${uuid}?reportType=all`)
-        setBlockedPosts(data?.blockedUsers || [])
+        const posts = await fetchBlockedPosts(uuid, "notUseful")
+        setBlockedPosts(posts || [])
       } catch (error) {
         setMessage({ text: "Failed to load blocked users.", type: "error" })
       }
     }
 
     if (uuid) {
-      fetchBlockedPosts()
+      fetchPosts()
     }
   }, [uuid])
 
@@ -56,13 +57,7 @@ export default function BlockedPosts({ onNavigateBack, uuid }: BlockedPostsProps
     setLoading((prev) => ({ ...prev, blocking: true }))
 
     try {
-      const { data } = await axios.post("http://localhost:5000/api/users/block-post", {
-        uuid,
-        postId,
-        reportType: "spam",
-        userName: extractedUserName,
-        postUrl,
-      })
+      const data =  await blockPost(uuid, postId, extractedUserName, postUrl, "notUseful")
 
       if (typeof window !== "undefined" && window.chrome && window.chrome.storage) {
         window.chrome.storage.local.get({ reportedPosts: [] }, ({ reportedPosts }) => {
@@ -91,7 +86,7 @@ export default function BlockedPosts({ onNavigateBack, uuid }: BlockedPostsProps
       setLoading((prev) => ({ ...prev, unblocking: postId }))
 
       try {
-        await axios.delete(`http://localhost:5000/api/users/block-post/${uuid}/${postId}?reportType=spam`)
+        await unblockPost(uuid, postId, "notUseful")
 
         setBlockedPosts((prev) => prev.filter((user) => user.postId !== postId))
         setMessage({ text: "User unblocked successfully.", type: "success" })

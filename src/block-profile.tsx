@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { ArrowLeft, User, X, Loader2 } from "lucide-react"
-import axios from "axios"
+import { blockUser, fetchBlockedUsers, unblockUser } from "../utils/api-service"
 
 interface BlockedProfilesProps {
   onNavigateBack: () => void
@@ -30,8 +30,8 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
   useEffect(() => {
     const fetchBlockedProfiles = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/users/blocked-users/${uuid}?blockType=suspicious`)
-        setBlockedProfiles(data.blockedUsers || [])
+        const users = await fetchBlockedUsers(uuid, "suspicious")
+        setBlockedProfiles(users || [])
       } catch (error) {
         setMessage({ text: "Failed to load blocked profiles.", type: "error" })
       }
@@ -49,11 +49,11 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
     }
   }, [message])
 
-  const isValidLinkedInURL = (url:string) => {
+  const isValidLinkedInURL = (url: string) => {
     const trimmed = url.trim()
     return /^https:\/\/(www\.)?linkedin\.com\/(in|company)\/[a-zA-Z0-9_-]+/.test(trimmed)
   }
-  
+
 
   const handleBlockProfile = useCallback(async () => {
     const trimmedUsername = username.trim()
@@ -68,14 +68,14 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
         type: "error",
       })
     }
-    
+
     const usernameMatch = trimmedUsername.match(/linkedin\.com\/(in|company)\/([^\/?]+)/)
     const extractedUsername = usernameMatch ? usernameMatch[2] : ""
-    
+
     if (!extractedUsername) {
       return setMessage({ text: "Could not extract username from URL.", type: "error" })
     }
-    
+
 
     if (!extractedUsername) {
       return setMessage({ text: "Could not extract username from URL.", type: "error" })
@@ -84,11 +84,7 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
     setLoading((prev) => ({ ...prev, blocking: true }))
 
     try {
-      const { data } = await axios.post("http://localhost:5000/api/users/block-user", {
-        uuid,
-        targetUserName: extractedUsername,
-        blockType: "suspicious",
-      })
+      await blockUser(uuid, extractedUsername, "suspicious")
 
       setBlockedProfiles((prev) => [...prev, { userName: extractedUsername, _id: Date.now().toString() }])
       // after successful API call
@@ -97,7 +93,7 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
         chrome.storage.local.set({ reportedUsernames: updatedUsernames })
       })
 
-      setMessage({ text: data.message, type: "success" })
+      setMessage({ text: "User marked as block successfully", type: "success" })
       setUsername("")
     } catch (error: any) {
       setMessage({
@@ -115,7 +111,7 @@ export default function BlockedProfiles({ onNavigateBack, uuid }: BlockedProfile
       setLoading((prev) => ({ ...prev, unblocking: userName }))
 
       try {
-        await axios.delete(`http://localhost:5000/api/users/block-user/${uuid}/${userName}?blockType=suspicious`)
+        await unblockUser(uuid, userName, "suspicious")
 
         setBlockedProfiles((prev) => prev.filter((profile) => profile.userName !== userName))
         setMessage({ text: "Profile unblocked successfully.", type: "success" })
