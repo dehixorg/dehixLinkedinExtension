@@ -1,6 +1,7 @@
 ; (() => {
   const processedPosts = new Set()
   let lastProcessedUrl = location.href
+  let observer;
 
   // Check if we're in a Chrome extension context
   const isExtensionContext = () => {
@@ -140,7 +141,9 @@
       if (username && spamUsernames.has(username) && !processedPosts.has(`spam-user-${username}`)) {
         const warningIcon = document.createElement("div")
         warningIcon.innerHTML = `
-         ⚠️
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffc107" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+          </svg>
         `
         warningIcon.style.cssText = `
           position: absolute;
@@ -207,8 +210,12 @@
 
   // Observe dynamic content (scroll, new posts, chat messages)
   const observeContentChanges = (status) => {
+    if (!status) return;
+
+    if (observer) observer.disconnect();
+
     let timeout
-    const observer = new MutationObserver(() => {
+    observer = new MutationObserver(() => {
       clearTimeout(timeout)
       timeout = setTimeout(() => {
         hideMatchedContent(status)
@@ -231,7 +238,9 @@
         if (isExtensionContext()) {
           try {
             chrome.storage.local.get(["status"], ({ status }) => {
-              hideMatchedContent(status)
+              if (status) {
+                hideMatchedContent(status)
+              }
             })
           } catch (e) {
             console.warn("Error accessing chrome storage:", e)
@@ -256,7 +265,11 @@
           if (message.action === "SETTINGS_UPDATED" || message.action === "RE_EVALUATE_POSTS") {
             chrome.storage.local.get(["status"], ({ status }) => {
               processedPosts.clear() // Clear processed posts to re-evaluate all
-              hideMatchedContent(status)
+              if (observer) observer.disconnect();
+              if (status) {
+                hideMatchedContent(status)
+                observeContentChanges(status)
+              }
             })
           }
         })

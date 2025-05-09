@@ -1,3 +1,4 @@
+// fraudDetection.tsx
 import { useState, useEffect } from "react"
 import { ChevronDown, AlertTriangle, Shield, Activity, ExternalLink } from "lucide-react"
 import "./style.css"
@@ -31,29 +32,36 @@ export default function FraudDetection({
 
   // Fetch data from API and update storage
   const fetchAndUpdateData = async () => {
-    if (!uuid) return
+    if (!uuid || !status) return;
 
     try {
-      // Fetch suspicious users
-      const suspiciousUsers = await fetchBlockedUsers(uuid, "suspicious")
-      // Fetch spam users
-      const spamUsersList = await fetchBlockedUsers(uuid, "spam")
-      // Fetch not useful posts
-      const notUsefulPosts = await fetchBlockedPosts(uuid, "notUseful")
-      // Fetch spam posts
-      const spamPostsList = await fetchBlockedPosts(uuid, "spam")
+      let suspiciousUsers: BlockedUser[] = [];
+      let spamUsersList: BlockedUser[] = [];
+      let notUsefulPosts: BlockedPost[] = [];
+      let spamPostsList: BlockedPost[] = [];
 
-      setBlockedUsers(suspiciousUsers)
-      setSpamUsers(spamUsersList)
-      setBlockedPosts(notUsefulPosts)
-      setSpamPosts(spamPostsList)
+      if (hideSuspiciousPosts) {
+        suspiciousUsers = await fetchBlockedUsers(uuid, "suspicious");
+      }
 
-      // Update chrome storage with the fetched data
+      if (hideFakePosts) {
+        notUsefulPosts = await fetchBlockedPosts(uuid, "notUseful");
+      }
+
+      // Always fetch spam posts/users if status is on
+      spamUsersList = await fetchBlockedUsers(uuid, "spam");
+      spamPostsList = await fetchBlockedPosts(uuid, "spam");
+
+      setBlockedUsers(suspiciousUsers);
+      setSpamUsers(spamUsersList);
+      setBlockedPosts(notUsefulPosts);
+      setSpamPosts(spamPostsList);
+
       if (typeof window !== "undefined" && window.chrome?.storage) {
-        const reportedUsernames = suspiciousUsers.map((user:any) => user.userName)
-        const spamUsernames = spamUsersList.map((user:any) => user.userName)
-        const reportedPosts = notUsefulPosts.map((post:any) => post.postId)
-        const spamPostIds = spamPostsList.map((post:any) => post.postId)
+        const reportedUsernames = suspiciousUsers.map((user) => user.userName);
+        const spamUsernames = spamUsersList.map((user) => user.userName);
+        const reportedPosts = notUsefulPosts.map((post) => post.postId);
+        const spamPostIds = spamPostsList.map((post) => post.postId);
 
         window.chrome.storage.local.set(
           {
@@ -63,17 +71,17 @@ export default function FraudDetection({
             spamPosts: spamPostIds,
           },
           () => {
-            // Notify content script to re-evaluate posts with new data
             window.chrome.runtime?.sendMessage({
               action: "RE_EVALUATE_POSTS",
-            })
-          },
-        )
+            });
+          }
+        );
       }
     } catch (error) {
-      console.error("Error fetching data:", error)
+      console.error("Error fetching data:", error);
     }
-  }
+  };
+
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.chrome?.storage) {
@@ -92,10 +100,8 @@ export default function FraudDetection({
             setAdvancedOpen(true)
             window.chrome.storage.local.set({ advancedOpen: true })
           }
-          if (data.uuid) {
-            setUuid(data.uuid)
-          }
-        },
+          if (data.uuid) setUuid(data.uuid)
+        }
       )
       window.chrome.storage.local.get(["statusEnabled"], (data) => {
         setEnabled(data.statusEnabled ?? true)
@@ -103,16 +109,14 @@ export default function FraudDetection({
     }
   }, [])
 
-  // Fetch data when uuid changes
   useEffect(() => {
-    if (uuid) {
+    if (uuid && status) {
       fetchAndUpdateData()
     }
-  }, [uuid])
+  }, [uuid, status])
 
   const handleLogoClick = () => {
     const newStatus = !status
-
     setStatus(newStatus)
 
     if (typeof window !== "undefined" && window.chrome?.storage) {
@@ -268,24 +272,16 @@ export default function FraudDetection({
           {advancedOpen && (
             <div className="accordion-content">
               <div className="advanced-options">
-                <button className="advanced-option-button block-button-red" onClick={onNavigateToBlockedUsers}>
+                <button className="advanced-option-button block-button-red" onClick={onNavigateToBlockedUsers} disabled={!status}>
                   <span>Block Post</span>
                 </button>
-                <button className="advanced-option-button block-button-red" onClick={onNavigateToBlockedProfiles}>
+                <button className="advanced-option-button block-button-red" onClick={onNavigateToBlockedProfiles} disabled={!status}>
                   <span>Block User</span>
                 </button>
-                <button
-                  className="advanced-option-button block-button-red"
-                  onClick={onNavigateToSpamPosts}
-                  disabled={!status}
-                >
+                <button className="advanced-option-button block-button-red" onClick={onNavigateToSpamPosts} disabled={!status}>
                   <span>Spam Post</span>
                 </button>
-                <button
-                  className="advanced-option-button block-button-red"
-                  onClick={onNavigateToSpamUser}
-                  disabled={!status}
-                >
+                <button className="advanced-option-button block-button-red" onClick={onNavigateToSpamUser} disabled={!status}>
                   <span>Spam User</span>
                 </button>
               </div>
